@@ -1,190 +1,222 @@
-let adminState = {
-  pendingApprovals: [
-    {
-      id: "APP-MEM-001",
-      name: "Danilo Estrada",
-      phone: "+63 (918) 291-0021",
-      employment: "Full-Time Cooperative Staff",
-      pmesCompleted: true,
-      initialShareCapital: 6500.00
-    },
-    {
-      id: "APP-MEM-002",
-      name: "Teresa Gomez",
-      phone: "+63 (922) 881-4412",
-      employment: "Self-Employed Entrepreneur",
-      pmesCompleted: false,
-      initialShareCapital: 3000.00
-    }
-  ],
-  members: [
-    {
-      id: "MEM-001",
-      accountNumber: "COOP-2024-884102",
-      name: "Elena Rostova",
-      phone: "+63 (917) 349-2041",
-      email: "elena.rostova@coopmail.org",
-      address: "Bgy. Bucal, Calamba City, Laguna",
-      savingsBalance: 8500.00,
-      activeLoanBalance: 6183.34,
-      accountStanding: "In Good Standing (Prime)",
-      status: "ACTIVE"
-    },
-    {
-      id: "MEM-002",
-      accountNumber: "COOP-2024-551980",
-      name: "Marcus Vance",
-      phone: "+63 (915) 782-9901",
-      email: "marcus.vance@coopmail.org",
-      address: "Bgy. Real, Calamba City, Laguna",
-      savingsBalance: 1200.00,
-      activeLoanBalance: 4100.00,
-      accountStanding: "Probationary (< ₱6,000 threshold)",
-      status: "ACTIVE"
-    },
-    {
-      id: "MEM-003",
-      accountNumber: "COOP-2024-119832",
-      name: "Amina Diallo",
-      phone: "+63 (920) 670-1284",
-      email: "amina.diallo@coopmail.org",
-      address: "Bgy. Halang, Calamba City, Laguna",
-      savingsBalance: 15000.00,
-      activeLoanBalance: 0.00,
-      accountStanding: "In Good Standing (Prime)",
-      status: "ACTIVE"
-    }
-  ],
-  savingsLedger: [
-    { ref: "SAV-TX-1001", memberId: "MEM-001", name: "Elena Rostova", category: "Initial Share Capital", amount: 5000.00, balance: 5000.00 },
-    { ref: "SAV-TX-1002", memberId: "MEM-002", name: "Marcus Vance", category: "Share Capital Contribution", amount: 1200.00, balance: 1200.00 },
-    { ref: "SAV-TX-1003", memberId: "MEM-003", name: "Amina Diallo", category: "Fixed High-Yield Savings", amount: 15000.00, balance: 15000.00 },
-    { ref: "SAV-TX-1004", memberId: "MEM-001", name: "Elena Rostova", category: "Compulsory Monthly Savings", amount: 3500.00, balance: 8500.00 }
-  ],
-  loanApplications: [
-    {
-      ref: "APP-LN-2026-102",
-      memberId: "MEM-003",
-      applicantName: "Amina Diallo",
-      accountNumber: "COOP-2024-119832",
-      requestedAmount: 25000.00,
-      term: 24,
-      purpose: "Procurement of commercial agricultural milling machinery",
-      savingsBalance: 15000.00,
-      currentLoanBalance: 0.00,
-      standing: "Prime (Exceeds ₱6k threshold)"
-    }
-  ],
-  payments: [
-    {
-      ref: "RCT-8841",
-      name: "Elena Rostova",
-      bankAccount: "BDO Unibank 1092-4819-22",
-      received: 883.33,
-      charges: 0.00,
-      penalties: 0.00,
-      remainingBalance: 6183.34
-    },
-    {
-      ref: "RCT-8842",
-      name: "Marcus Vance",
-      bankAccount: "BPI 8412-0091-44",
-      received: 683.33,
-      charges: 25.00,
-      penalties: 50.00,
-      remainingBalance: 4100.00
-    }
-  ]
-};
+// admin.js - CoopCore Enterprise Admin Workstation Backend Logic
+
+let adminState = CoopStore.get();
 
 function togglePassword() {
-    const password = document.getElementById('password');
-    const eye = document.getElementById('password-eye');
+  const password = document.getElementById('password');
+  const eye = document.getElementById('password-eye');
 
-    if (password.type === 'password') {
-        password.type = 'text';
-        eye.setAttribute('data-lucide', 'eye-off');
-    } else {
-        password.type = 'password';
-        eye.setAttribute('data-lucide', 'eye');
-    }
+  if (password.type === 'password') {
+    password.type = 'text';
+    eye.setAttribute('data-lucide', 'eye-off');
+  } else {
+    password.type = 'password';
+    eye.setAttribute('data-lucide', 'eye');
+  }
 
-    lucide.createIcons();
+  lucide.createIcons();
 }
 
 function formatPeso(val) {
-  return "₱" + Number(val).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return CoopStore.formatPeso(val);
 }
 
 function handleAdminLogin(e) {
   e.preventDefault();
+  const emailInput = document.getElementById('admin-email');
+  const passwordInput = document.getElementById('password');
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : "admin@coopcore.ph";
+  const pass = passwordInput ? passwordInput.value : "";
+
+  // Validate admin email and password (allows Maria Santos or Eduardo Ramos)
+  const isAuthorizedStaff = email.includes("admin") || email.includes("credit") || email.includes("maria") || email.includes("eduardo");
+  if (!isAuthorizedStaff) {
+    alert("Invalid credentials. Access restricted to cooperative administrative staff (admin@coopcore.ph or credit@coopcore.ph).");
+    return;
+  }
+
+  if (pass && pass.length < 3) {
+    alert("Please enter a valid password.");
+    return;
+  }
+
+  // Set staff identity based on login email
+  if (email.includes("credit") || email.includes("eduardo")) {
+    CoopStore.setActiveStaff("eduardo");
+  } else {
+    CoopStore.setActiveStaff("maria");
+  }
+
+  CoopStore.setAdminLoggedIn(true);
   document.getElementById('admin-auth-screen').style.display = 'none';
   document.getElementById('admin-app-screen').style.display = 'flex';
   renderAdminPortal();
 }
 
 function adminLogout() {
+  CoopStore.setAdminLoggedIn(false);
   document.getElementById('admin-app-screen').style.display = 'none';
   document.getElementById('admin-auth-screen').style.display = 'flex';
 }
 
+function switchAdminStaff(staffId) {
+  const staff = CoopStore.setActiveStaff(staffId);
+  renderAdminStaffHeader();
+  alert(`Active workstation staff switched to:\n${staff.name}\nRole: ${staff.role}\nTier Authority: ${staff.canEditTier ? '✓ Authorized to modify Member Credit Tiers' : 'Restricted (General Operations)'}`);
+}
+
+function renderAdminStaffHeader() {
+  const staff = CoopStore.getActiveStaff();
+  const select = document.getElementById('admin-staff-select');
+  if (select) select.value = staff.id;
+  updateDateSimulationLabel();
+}
+
+function updateDateSimulationLabel() {
+  const dateLabel = document.getElementById('admin-detected-date-label');
+  if (dateLabel) {
+    const curDate = CoopStore.getSystemDate();
+    dateLabel.innerText = curDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+}
+
+function toggleDateSimulationPrompt() {
+  const curDate = CoopStore.getSystemDate();
+  const choice = prompt(
+    `🕒 COOPERATIVE PENALTY SYSTEM & CLOCK DETECTOR\n\n` +
+    `Current Detected Date: ${curDate.toLocaleDateString()}\n\n` +
+    `To test penalties, you can EITHER:\n` +
+    `1) Change your laptop date in Windows Settings (the system detects it automatically!)\n` +
+    `OR\n` +
+    `2) Enter a test simulation date here (YYYY-MM-DD), or type "+15" to fast-forward 15 days, or "reset" to use laptop clock:`,
+    "+15"
+  );
+  if (!choice) return;
+
+  if (choice.toLowerCase() === "reset") {
+    CoopStore.setSimulatedDate(null);
+    alert("Clock reset to your laptop system date!");
+  } else if (choice === "+15" || choice === "+30") {
+    const d = new Date();
+    d.setDate(d.getDate() + (choice === "+30" ? 30 : 15));
+    CoopStore.setSimulatedDate(d.toISOString().split("T")[0]);
+    alert(`Clock simulated to: ${d.toLocaleDateString()}\nPast due loans will now calculate and display penalties!`);
+  } else {
+    const parsed = new Date(choice);
+    if (isNaN(parsed.getTime())) {
+      alert("Invalid date format. Please use YYYY-MM-DD, '+15', or 'reset'.");
+      return;
+    }
+    CoopStore.setSimulatedDate(choice);
+    alert(`Clock simulated to: ${parsed.toLocaleDateString()}\nPast due loans will now calculate and display penalties!`);
+  }
+
+  adminState = CoopStore.get();
+  renderAdminPortal();
+}
+
 function switchAdminTab(tabId) {
   document.querySelectorAll('.admin-pane').forEach(el => el.style.display = 'none');
-  document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
-  document.getElementById(`admin-tab-${tabId}`).style.display = 'block';
-  event.currentTarget.classList.add('active');
+  document.querySelectorAll('.admin-menu .menu-item').forEach(el => el.classList.remove('active'));
+
+  const pane = document.getElementById(`admin-tab-${tabId}`);
+  if (pane) pane.style.display = 'block';
+
+  const menuItems = document.querySelectorAll('.admin-menu .menu-item');
+  const tabMap = { 'dashboard': 0, 'approvals': 1, 'registry': 2, 'savings': 3, 'loans': 4, 'repayments': 5 };
+  if (tabMap[tabId] !== undefined && menuItems[tabMap[tabId]]) {
+    menuItems[tabMap[tabId]].classList.add('active');
+  }
+
   lucide.createIcons();
 }
 
 function renderAdminPortal() {
+  // Sync state from shared store
+  adminState = CoopStore.get();
+  renderAdminStaffHeader();
+
   // Update Overview Stats
-  document.getElementById('stat-members-count').innerText = adminState.members.length;
-  const totalSavings = adminState.members.reduce((acc, m) => acc + m.savingsBalance, 0);
+  const activeMembersCount = adminState.members.filter(m => (m.status || 'ACTIVE') === 'ACTIVE').length;
+  document.getElementById('stat-members-count').innerText = activeMembersCount;
+
+  const totalSavings = adminState.members.reduce((acc, m) => acc + (Number(m.savingsBalance) || 0), 0);
   document.getElementById('stat-total-savings').innerText = formatPeso(totalSavings);
-  document.getElementById('stat-pending-loans').innerText = adminState.loanApplications.length;
-  const totalPortfolio = adminState.members.reduce((acc, m) => acc + m.activeLoanBalance, 0);
+
+  const pendingLoansCount = adminState.loanApplications.length;
+  document.getElementById('stat-pending-loans').innerText = pendingLoansCount;
+
+  const totalPortfolio = adminState.members.reduce((acc, m) => acc + (Number(m.activeLoanBalance) || 0), 0);
   document.getElementById('stat-loan-portfolio').innerText = formatPeso(totalPortfolio);
 
-  // Overview Table
-  document.getElementById('admin-dash-tx-tbody').innerHTML = adminState.savingsLedger.slice(-3).reverse().map(t => `
+  // Overview Table (Recent general ledger postings)
+  const recentLedger = (adminState.savingsLedger || []).slice(-5).reverse();
+  document.getElementById('admin-dash-tx-tbody').innerHTML = recentLedger.length > 0 ? recentLedger.map(t => `
     <tr>
       <td><code>${t.ref}</code></td>
       <td><strong>${t.name}</strong></td>
       <td>${t.category}</td>
-      <td style="color:var(--admin-green); font-weight:700;">+${formatPeso(t.amount)}</td>
-      <td>Today</td>
+      <td style="color:${t.amount >= 0 ? 'var(--admin-green)' : 'var(--crimson)'}; font-weight:700;">
+        ${t.amount >= 0 ? '+' : ''}${formatPeso(t.amount)}
+      </td>
+      <td>${t.date ? t.date.split(' ')[0] : 'Today'}</td>
     </tr>
-  `).join('');
+  `).join('') : `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:16px;">No ledger postings found</td></tr>`;
 
-  // 1. Render Approvals
-  renderApprovals();
-
-  // 2. Render Registry
-  renderRegistry(adminState.members);
-
-  // 3. Render Savings Ledger
-  renderSavings(adminState.savingsLedger);
-
-  // 4. Render Loans
-  renderLoans(adminState.loanApplications);
-
-  // 5. Render Payments (Non-Input)
-  renderPayments(adminState.payments);
+  // Apply filters / Render all sections
+  filterApprovals();
+  filterMemberRegistry();
+  filterSavingsLedger();
+  filterLoanApps();
+  filterPaymentRecords();
 
   lucide.createIcons();
 }
 
-function renderApprovals() {
+// 1. MEMBER APPROVALS FILTER & RENDER
+function filterApprovals() {
+  const query = (document.getElementById('approvals-search-input')?.value || "").toLowerCase().trim();
+  const pmesFilter = document.getElementById('approvals-filter-pmes')?.value || "ALL";
+
+  const filtered = (adminState.pendingApprovals || []).filter(app => {
+    const matchesQuery = !query ||
+      (app.name && app.name.toLowerCase().includes(query)) ||
+      (app.phone && app.phone.toLowerCase().includes(query)) ||
+      (app.employment && app.employment.toLowerCase().includes(query)) ||
+      (app.occupation && app.occupation.toLowerCase().includes(query)) ||
+      (app.email && app.email.toLowerCase().includes(query));
+
+    let matchesPmes = true;
+    if (pmesFilter === "VERIFIED") matchesPmes = !!app.pmesCompleted;
+    if (pmesFilter === "PENDING") matchesPmes = !app.pmesCompleted;
+
+    return matchesQuery && matchesPmes;
+  });
+
+  renderApprovals(filtered);
+  lucide.createIcons();
+}
+
+function renderApprovals(list = adminState.pendingApprovals) {
   const tbody = document.getElementById('approvals-table-tbody');
-  tbody.innerHTML = adminState.pendingApprovals.map(app => `
+  if (!tbody) return;
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:18px;">No pending applicant qualifications match filter criteria.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(app => `
     <tr>
       <td><strong>${app.name}</strong></td>
-      <td>${app.phone}</td>
-      <td>${app.employment}</td>
+      <td>${app.phone || '-'}</td>
+      <td>${app.employment || app.occupation || 'Regular Member'}</td>
       <td>
-        <span class="badge badge-red">PMES Pending</span>
+        <span class="badge ${app.pmesCompleted ? 'badge-green' : 'badge-red'}">
+          ${app.pmesCompleted ? 'PMES Verified' : 'PMES Pending'}
+        </span>
       </td>
-      <td style="font-weight:700; color:var(--admin-green);">${formatPeso(app.initialShareCapital)}</td>
+      <td style="font-weight:700; color:var(--admin-green);">${formatPeso(app.initialShareCapital || 0)}</td>
       <td>
         <button class="btn btn-primary" style="padding:4px 8px; font-size:11px;" onclick="approveMember('${app.id}')">Approve & Issue ID</button>
         <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="rejectMember('${app.id}')">Decline</button>
@@ -194,64 +226,229 @@ function renderApprovals() {
 }
 
 function approveMember(id) {
-  const app = adminState.pendingApprovals.find(a => a.id === id);
-  if (!app) return;
-  adminState.members.push({
-    id: "MEM-00" + (adminState.members.length + 1),
-    accountNumber: "COOP-2024-" + Math.floor(100000 + Math.random() * 900000),
-    name: app.name,
-    phone: app.phone,
-    email: app.name.toLowerCase().replace(' ', '.') + "@coopmail.org",
-    address: "Calamba City, Laguna",
-    savingsBalance: app.initialShareCapital,
-    activeLoanBalance: 0.00,
-    accountStanding: "In Good Standing",
-    status: "ACTIVE"
-  });
-  adminState.pendingApprovals = adminState.pendingApprovals.filter(a => a.id !== id);
-  alert(`Member ${app.name} successfully approved and registered into cooperative database.`);
+  const newMember = CoopStore.approvePendingApproval(id);
+  if (!newMember) {
+    alert("Applicant record not found.");
+    return;
+  }
+  alert(`Member ${newMember.name} successfully approved!\nAssigned Member ID: ${newMember.id}\nAccount Number: ${newMember.accountNumber}`);
   renderAdminPortal();
 }
 
 function rejectMember(id) {
-  adminState.pendingApprovals = adminState.pendingApprovals.filter(a => a.id !== id);
-  renderAdminPortal();
+  const app = adminState.pendingApprovals.find(a => a.id === id);
+  const name = app ? app.name : "applicant";
+  if (confirm(`Are you sure you want to decline the membership application for ${name}?`)) {
+    CoopStore.rejectPendingApproval(id);
+    alert(`Membership application for ${name} has been declined.`);
+    renderAdminPortal();
+  }
 }
 
-function renderRegistry(list) {
+// 2. MEMBER REGISTRY FILTER & RENDER
+function filterMemberRegistry() {
+  const searchEl = document.getElementById('registry-search-input');
+  const tierEl = document.getElementById('registry-filter-tier');
+  const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
+  const filterVal = tierEl ? tierEl.value : "ALL";
+
+  const filtered = (adminState.members || []).filter(m => {
+    const matchesQuery = !query ||
+      (m.name && m.name.toLowerCase().includes(query)) ||
+      (m.id && m.id.toLowerCase().includes(query)) ||
+      (m.accountNumber && m.accountNumber.toLowerCase().includes(query)) ||
+      (m.email && m.email.toLowerCase().includes(query)) ||
+      (m.phone && m.phone.toLowerCase().includes(query));
+
+    let matchesFilter = true;
+    if (filterVal !== "ALL") {
+      if (filterVal === "ACTIVE" || filterVal === "INACTIVE" || filterVal === "SUSPENDED") {
+        matchesFilter = (m.status || 'ACTIVE') === filterVal;
+      } else {
+        const standing = ((m.accountStanding || '') + ' ' + (m.creditTier || '')).toLowerCase();
+        matchesFilter = standing.includes(filterVal.toLowerCase());
+      }
+    }
+
+    return matchesQuery && matchesFilter;
+  });
+
+  renderRegistry(filtered);
+  lucide.createIcons();
+}
+
+function renderRegistry(list = adminState.members) {
   const tbody = document.getElementById('registry-table-tbody');
-  tbody.innerHTML = list.map(m => `
+  if (!tbody) return;
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:18px;">No members found matching filter criteria.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(m => {
+    const status = m.status || 'ACTIVE';
+    let badgeClass = 'badge-green';
+    if (status === 'INACTIVE') badgeClass = 'badge-amber';
+    else if (status === 'SUSPENDED') badgeClass = 'badge-red';
+
+    const tier = m.creditTier || 'Tier C (Sub Standard)';
+    let tierBadgeClass = 'badge-amber';
+    if (tier.includes('Tier A')) tierBadgeClass = 'badge-green';
+    else if (tier.includes('Tier B')) tierBadgeClass = 'badge-blue';
+
+    const overdueInfo = CoopStore.checkMemberLoanOverdue(m);
+
+    return `
     <tr>
       <td><strong>${m.id}</strong></td>
       <td><code>${m.accountNumber}</code></td>
-      <td><strong>${m.name}</strong></td>
-      <td style="color:var(--admin-green); font-weight:700;">${formatPeso(m.savingsBalance)}</td>
-      <td><span class="badge badge-green">${m.status}</span></td>
       <td>
-        <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="viewMemberDetails('${m.id}')">
-          <i data-lucide="eye" style="width:13px; height:13px;"></i> View Account Details
-        </button>
+        <strong>${m.name}</strong>
+        ${overdueInfo.isOverdue ? `<br><span class="badge badge-red" style="font-size:10px; margin-top:3px; display:inline-block;">⚠️ Past Due: ₱${overdueInfo.penalty} penalty</span>` : ''}
+      </td>
+      <td style="color:var(--admin-green); font-weight:700;">${formatPeso(m.savingsBalance)}</td>
+      <td><span class="badge ${tierBadgeClass}" style="font-size:11px;">${tier}</span></td>
+      <td><span class="badge ${badgeClass}">${status}</span></td>
+      <td>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="viewMemberDetails('${m.id}')">
+            <i data-lucide="eye" style="width:13px; height:13px;"></i> Details & Tier
+          </button>
+          <select class="form-input" style="padding:3px 6px; font-size:11px; width:auto; font-weight:700;" onchange="changeMemberStatusDirect('${m.id}', this.value)" title="Change account status in database">
+            <option value="ACTIVE" ${status === 'ACTIVE' ? 'selected' : ''}>Active</option>
+            <option value="INACTIVE" ${status === 'INACTIVE' ? 'selected' : ''}>Inactive</option>
+            <option value="SUSPENDED" ${status === 'SUSPENDED' ? 'selected' : ''}>Suspended</option>
+          </select>
+        </div>
       </td>
     </tr>
-  `).join('');
+  `}).join('');
+}
+
+function changeMemberStatusDirect(memberId, newStatus) {
+  const updated = CoopStore.setMemberStatus(memberId, newStatus);
+  if (updated) {
+    alert(`Member ${updated.name} account status has been updated to "${newStatus}" in the database.`);
+    renderAdminPortal();
+  }
+}
+
+function handleTierUpdateDirect(memberId) {
+  const select = document.getElementById(`modal-tier-select-${memberId}`);
+  if (!select) return;
+  const newTier = select.value;
+  const activeStaff = CoopStore.getActiveStaff();
+
+  // Enforce staff authorization: Only Credit Committee Officer (Eduardo Ramos) can authorize
+  if (!activeStaff.canEditTier) {
+    const wantSwitch = confirm(
+      `🔒 ROLE AUTHORIZATION RESTRICTION\n\n` +
+      `Access Denied: Maria Santos (General Operations Staff / Teller) does not have committee authority to alter credit ratings.\n\n` +
+      `Pursuant to Cooperative Credit Bylaws, only the designated Credit Committee Officer (Eduardo Ramos) can authorize Tier changes.\n\n` +
+      `Would you like to switch to Credit Committee Officer (Eduardo Ramos) now to authorize this tier change?`
+    );
+
+    if (wantSwitch) {
+      CoopStore.setActiveStaff("eduardo");
+      renderAdminStaffHeader();
+    } else {
+      return;
+    }
+  }
+
+  const res = CoopStore.updateMemberTier(memberId, newTier);
+  if (res.success) {
+    alert(`✓ TIER UPDATE AUTHORIZED\n\nMember credit rating successfully updated to: ${newTier}\nAuthorized Officer: ${res.authorizedBy} (Credit Committee)\n\nMember borrowing limit and database tables have been updated.`);
+    adminState = CoopStore.get();
+    viewMemberDetails(memberId);
+    renderAdminPortal();
+  } else {
+    alert(res.message);
+  }
 }
 
 function viewMemberDetails(memberId) {
-  const m = adminState.members.find(mem => mem.id === memberId);
+  const m = CoopStore.getMemberById(memberId);
   if (!m) return;
+  const status = m.status || 'ACTIVE';
+  let badgeClass = 'badge-green';
+  if (status === 'INACTIVE') badgeClass = 'badge-amber';
+  else if (status === 'SUSPENDED') badgeClass = 'badge-red';
+
+  const tier = m.creditTier || 'Tier C (Sub Standard)';
+  const overdueInfo = CoopStore.checkMemberLoanOverdue(m);
+
   const modalBody = document.getElementById('account-details-modal-body');
   modalBody.innerHTML = `
-    <div style="background:var(--admin-light); border:1px solid var(--admin-border-green); padding:16px; border-radius:10px; margin-bottom:16px;">
-      <h3 style="color:var(--admin-dark); font-size:18px; font-weight:800;">${m.name}</h3>
-      <p style="font-size:13px; color:var(--text-muted);">Member ID: <strong>${m.id}</strong> &bull; Account: <strong>${m.accountNumber}</strong></p>
+    <div style="background:var(--admin-light); border:1px solid var(--admin-border-green); padding:16px; border-radius:10px; margin-bottom:14px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+          <h3 style="color:var(--admin-dark); font-size:18px; font-weight:800;">${m.name}</h3>
+          <p style="font-size:13px; color:var(--text-muted); margin-top:2px;">Member ID: <strong>${m.id}</strong> &bull; Account: <strong>${m.accountNumber}</strong></p>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <span class="badge badge-green" style="font-size:12px; padding:4px 10px;">${tier}</span>
+          <span class="badge ${badgeClass}" style="font-size:12px; padding:4px 10px;">Status: ${status}</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Interactive Database Account Status Control -->
+    <div style="background:#F8FAFC; border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-bottom:14px;">
+      <label style="font-size:11px; text-transform:uppercase; color:var(--text-muted); font-weight:700; display:block; margin-bottom:6px;">Update Database Account Status</label>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select id="modal-status-select-${m.id}" class="form-input" style="max-width:200px; padding:6px 10px; font-size:12px; font-weight:700;">
+          <option value="ACTIVE" ${status === 'ACTIVE' ? 'selected' : ''}>ACTIVE (Full Access)</option>
+          <option value="INACTIVE" ${status === 'INACTIVE' ? 'selected' : ''}>INACTIVE (Dormant)</option>
+          <option value="SUSPENDED" ${status === 'SUSPENDED' ? 'selected' : ''}>SUSPENDED (Restricted)</option>
+        </select>
+        <button class="btn btn-outline" style="padding:6px 12px; font-size:12px;" onclick="changeMemberStatusDirect('${m.id}', document.getElementById('modal-status-select-${m.id}').value); viewMemberDetails('${m.id}');">
+          Save Status
+        </button>
+      </div>
+    </div>
+
+    <!-- Member Credit Tier & Loan Limit (Bylaw Authority: Credit Committee Only) -->
+    <div style="background:#F0FDF4; border:1px solid var(--admin-border-green); border-radius:8px; padding:12px 14px; margin-bottom:16px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+        <label style="font-size:11px; text-transform:uppercase; color:var(--dark-green); font-weight:800; margin:0;">
+          Member Credit Tier & Loan Facility
+        </label>
+        <span style="font-size:11px; background:#DCFCE7; color:var(--dark-green); padding:2px 8px; border-radius:4px; font-weight:700;">
+          🔒 Authorized Officer: Eduardo Ramos (Credit Committee)
+        </span>
+      </div>
+      <p style="font-size:11.5px; color:var(--text-muted); margin-bottom:8px;">
+        All new members start at <strong>Tier C (Max ₱50k)</strong>. Modifications must be evaluated and approved by designated Credit Committee Officer.
+      </p>
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select id="modal-tier-select-${m.id}" class="form-input" style="max-width:270px; padding:6px 10px; font-size:12px; font-weight:700;">
+          <option value="Tier C (Sub Standard)" ${tier.includes('Tier C') ? 'selected' : ''}>Tier C (Sub Standard) - Max ₱50,000 [Default]</option>
+          <option value="Tier B (Standard)" ${tier.includes('Tier B') ? 'selected' : ''}>Tier B (Standard) - Max ₱100,000</option>
+          <option value="Tier A (Prime)" ${tier.includes('Tier A') ? 'selected' : ''}>Tier A (Prime) - Max ₱150,000</option>
+        </select>
+        <button class="btn btn-primary" style="padding:6px 14px; font-size:12px;" onclick="handleTierUpdateDirect('${m.id}')">
+          Authorize Tier Change
+        </button>
+      </div>
+    </div>
+
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; margin-bottom:16px;">
-      <div><span style="color:var(--text-muted);">Phone:</span> <strong>${m.phone}</strong></div>
-      <div><span style="color:var(--text-muted);">Email:</span> <strong>${m.email}</strong></div>
+      <div><span style="color:var(--text-muted);">Phone:</span> <strong>${m.phone || '-'}</strong></div>
+      <div><span style="color:var(--text-muted);">Email:</span> <strong>${m.email || '-'}</strong></div>
       <div><span style="color:var(--text-muted);">Registered Savings:</span> <strong style="color:var(--admin-green);">${formatPeso(m.savingsBalance)}</strong></div>
       <div><span style="color:var(--text-muted);">Active Loan Balance:</span> <strong style="color:var(--crimson);">${formatPeso(m.activeLoanBalance)}</strong></div>
-      <div style="grid-column:span 2;"><span style="color:var(--text-muted);">Registered Address:</span> <strong>${m.address}</strong></div>
-      <div style="grid-column:span 2;"><span style="color:var(--text-muted);">Account Standing:</span> <strong style="color:var(--admin-green);">${m.accountStanding}</strong></div>
+      <div><span style="color:var(--text-muted);">Monthly Due:</span> <strong>${formatPeso(m.monthlyDue || 0)}</strong></div>
+      <div><span style="color:var(--text-muted);">Amortization Due Date:</span> <strong>${m.loanDueDate || 'None'}</strong></div>
+      <div style="grid-column:span 2; background:${overdueInfo.isOverdue ? '#FFF5F5' : '#F8FAFC'}; border:1px solid ${overdueInfo.isOverdue ? '#FED7D7' : 'var(--border)'}; padding:8px 10px; border-radius:6px;">
+        <span style="color:var(--text-muted);">Loan Overdue Status:</span> 
+        ${overdueInfo.isOverdue
+      ? `<strong style="color:var(--crimson);">⚠️ PAST DUE (${overdueInfo.daysOverdue} days late) &bull; Assessed Late Penalty: ${formatPeso(overdueInfo.penalty)} &bull; Total Due Now: ${formatPeso(overdueInfo.totalDue)}</strong>`
+      : `<strong style="color:var(--admin-green);">✓ Up to date (No penalties assessed)</strong>`}
+      </div>
+      <div style="grid-column:span 2;"><span style="color:var(--text-muted);">Registered Address:</span> <strong>${m.address || '-'}</strong></div>
+      <div style="grid-column:span 2;"><span style="color:var(--text-muted);">Account Standing:</span> <strong style="color:var(--admin-green);">${m.accountStanding || tier || 'Good Standing'}</strong></div>
     </div>
     <button class="btn btn-outline" style="width:100%; justify-content:center;" onclick="closeModal('account-details-modal')">Close Account Details</button>
   `;
@@ -259,40 +456,90 @@ function viewMemberDetails(memberId) {
   lucide.createIcons();
 }
 
-function filterMemberRegistry(q) {
-  const filtered = adminState.members.filter(m => 
-    m.name.toLowerCase().includes(q.toLowerCase()) || 
-    m.id.toLowerCase().includes(q.toLowerCase()) ||
-    m.accountNumber.toLowerCase().includes(q.toLowerCase())
-  );
-  renderRegistry(filtered);
-  lucide.createIcons();
+// 3. SAVINGS LEDGER FILTER & RENDER
+function filterSavingsLedger() {
+  const searchEl = document.getElementById('savings-search-input');
+  const catEl = document.getElementById('savings-filter-category');
+  const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
+  const catFilter = catEl ? catEl.value : "ALL";
+
+  const filtered = (adminState.savingsLedger || []).filter(s => {
+    const matchesQuery = !query ||
+      (s.name && s.name.toLowerCase().includes(query)) ||
+      (s.memberId && s.memberId.toLowerCase().includes(query)) ||
+      (s.ref && s.ref.toLowerCase().includes(query)) ||
+      (s.category && s.category.toLowerCase().includes(query));
+
+    let matchesCat = true;
+    if (catFilter !== "ALL") {
+      matchesCat = (s.category || '').toLowerCase().includes(catFilter.toLowerCase());
+    }
+
+    return matchesQuery && matchesCat;
+  });
+
+  renderSavings(filtered);
 }
 
-function renderSavings(list) {
+function renderSavings(list = adminState.savingsLedger) {
   const tbody = document.getElementById('savings-ledger-tbody');
-  tbody.innerHTML = list.map(s => `
+  if (!tbody) return;
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:18px;">No savings ledger entries match filter criteria.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.slice().reverse().map(s => `
     <tr>
       <td><code>${s.ref}</code></td>
-      <td><strong>${s.memberId}</strong></td>
+      <td><strong>${s.memberId || '-'}</strong></td>
       <td>${s.name}</td>
       <td>${s.category}</td>
-      <td style="color:var(--admin-green); font-weight:700;">+${formatPeso(s.amount)}</td>
+      <td style="color:${s.amount >= 0 ? 'var(--admin-green)' : 'var(--crimson)'}; font-weight:700;">
+        ${s.amount >= 0 ? '+' : ''}${formatPeso(s.amount)}
+      </td>
       <td style="font-weight:700;">${formatPeso(s.balance)}</td>
     </tr>
   `).join('');
 }
 
-function filterSavingsLedger(q) {
-  const filtered = adminState.savingsLedger.filter(s => 
-    s.name.toLowerCase().includes(q.toLowerCase()) || 
-    s.memberId.toLowerCase().includes(q.toLowerCase())
-  );
-  renderSavings(filtered);
+// 4. LOAN APPLICATIONS FILTER & RENDER
+function filterLoanApps() {
+  const searchEl = document.getElementById('loans-search-input');
+  const pkgEl = document.getElementById('loans-filter-package');
+  const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
+  const pkgFilter = pkgEl ? pkgEl.value : "ALL";
+
+  const filtered = (adminState.loanApplications || []).filter(a => {
+    const matchesQuery = !query ||
+      (a.ref && a.ref.toLowerCase().includes(query)) ||
+      (a.applicantName && a.applicantName.toLowerCase().includes(query)) ||
+      (a.purpose && a.purpose.toLowerCase().includes(query)) ||
+      (a.accountNumber && a.accountNumber.toLowerCase().includes(query));
+
+    let matchesPkg = true;
+    if (pkgFilter !== "ALL") {
+      const pkgName = ((a.package || '') + ' ' + (a.purpose || '')).toLowerCase();
+      matchesPkg = pkgName.includes(pkgFilter.toLowerCase());
+    }
+
+    return matchesQuery && matchesPkg;
+  });
+
+  renderLoans(filtered);
+  lucide.createIcons();
 }
 
-function renderLoans(list) {
+function renderLoans(list = adminState.loanApplications) {
   const tbody = document.getElementById('loans-review-tbody');
+  if (!tbody) return;
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:18px;">No loan applications match filter criteria.</td></tr>`;
+    return;
+  }
+
   tbody.innerHTML = list.map(app => `
     <tr>
       <td><code>${app.ref}</code></td>
@@ -300,7 +547,7 @@ function renderLoans(list) {
       <td style="font-weight:700; color:var(--admin-green);">${formatPeso(app.requestedAmount)}</td>
       <td>${app.term} mos</td>
       <td>${app.purpose}</td>
-      <td><span class="badge badge-green">${app.standing}</span></td>
+      <td><span class="badge badge-green">${app.standing || 'Prime'}</span></td>
       <td>
         <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="viewAccountStatus('${app.ref}')">
           <i data-lucide="eye" style="width:13px; height:13px;"></i> View Account Status
@@ -308,15 +555,6 @@ function renderLoans(list) {
       </td>
     </tr>
   `).join('');
-}
-
-function filterLoanApps(q) {
-  const filtered = adminState.loanApplications.filter(a => 
-    a.ref.toLowerCase().includes(q.toLowerCase()) ||
-    a.applicantName.toLowerCase().includes(q.toLowerCase())
-  );
-  renderLoans(filtered);
-  lucide.createIcons();
 }
 
 function viewAccountStatus(ref) {
@@ -329,6 +567,8 @@ function viewAccountStatus(ref) {
       <div style="font-size:13px; color:var(--text-muted);">Application Docket: <strong>${app.ref}</strong></div>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px; margin-bottom:16px;">
+      <div><span style="color:var(--text-muted);">Requested Amount:</span> <strong style="color:var(--admin-green);">${formatPeso(app.requestedAmount)}</strong></div>
+      <div><span style="color:var(--text-muted);">Repayment Term:</span> <strong>${app.term} Months</strong></div>
       <div><span style="color:var(--text-muted);">Member Savings Balance:</span> <strong style="color:var(--admin-green);">${formatPeso(app.savingsBalance)}</strong></div>
       <div><span style="color:var(--text-muted);">Current Active Loan:</span> <strong style="color:var(--crimson);">${formatPeso(app.currentLoanBalance)}</strong></div>
       <div style="grid-column:span 2;"><span style="color:var(--text-muted);">Account Standing:</span> <strong>${app.standing}</strong></div>
@@ -336,7 +576,7 @@ function viewAccountStatus(ref) {
     </div>
     <div style="display:flex; gap:10px;">
       <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="grantLoan('${app.ref}')">Approve & Disburse</button>
-      <button class="btn btn-danger" style="flex:1; justify-content:center;" onclick="closeModal('account-status-modal')">Decline</button>
+      <button class="btn btn-danger" style="flex:1; justify-content:center;" onclick="declineLoan('${app.ref}')">Decline</button>
     </div>
   `;
   document.getElementById('account-status-modal').classList.add('active');
@@ -344,22 +584,71 @@ function viewAccountStatus(ref) {
 }
 
 function grantLoan(ref) {
-  adminState.loanApplications = adminState.loanApplications.filter(a => a.ref !== ref);
-  alert("Loan application approved! Disbursal transaction generated.");
+  const result = CoopStore.grantLoan(ref);
+  if (!result.success) {
+    alert(result.message || "Failed to approve loan.");
+    return;
+  }
+  alert(`Loan application approved! Disbursal transaction generated for ${result.application.applicantName}.`);
   closeModal('account-status-modal');
   renderAdminPortal();
 }
 
-function renderPayments(list) {
+function declineLoan(ref) {
+  if (confirm(`Are you sure you want to decline loan application ${ref}?`)) {
+    const result = CoopStore.rejectLoan(ref);
+    if (!result.success) {
+      alert(result.message || "Failed to decline loan.");
+      return;
+    }
+    alert(`Loan application ${ref} has been declined.`);
+    closeModal('account-status-modal');
+    renderAdminPortal();
+  }
+}
+
+// 5. RECORD PAYMENT FILTER & RENDER
+function filterPaymentRecords() {
+  const searchEl = document.getElementById('pay-search-ref');
+  const chanEl = document.getElementById('pay-filter-channel');
+  const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
+  const chanFilter = chanEl ? chanEl.value : "ALL";
+
+  const filtered = (adminState.payments || []).filter(p => {
+    const matchesQuery = !query ||
+      (p.ref && p.ref.toLowerCase().includes(query)) ||
+      (p.name && p.name.toLowerCase().includes(query)) ||
+      (p.bankAccount && p.bankAccount.toLowerCase().includes(query));
+
+    let matchesChan = true;
+    if (chanFilter !== "ALL") {
+      matchesChan = (p.bankAccount || '').toLowerCase().includes(chanFilter.toLowerCase());
+    }
+
+    return matchesQuery && matchesChan;
+  });
+
+  renderPayments(filtered);
+  lucide.createIcons();
+}
+
+function renderPayments(list = adminState.payments) {
   const tbody = document.getElementById('payment-ledger-tbody');
+  if (!tbody) return;
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:18px;">No payment settlement records match filter criteria.</td></tr>`;
+    return;
+  }
+
   tbody.innerHTML = list.map(p => `
     <tr>
       <td><code>${p.ref}</code></td>
       <td><strong>${p.name}</strong></td>
       <td>${p.bankAccount}</td>
       <td style="color:var(--admin-green); font-weight:700;">${formatPeso(p.received)}</td>
-      <td>${formatPeso(p.charges)}</td>
-      <td style="color:var(--crimson);">${formatPeso(p.penalties)}</td>
+      <td>${formatPeso(p.charges || 0)}</td>
+      <td style="color:var(--crimson);">${formatPeso(p.penalties || 0)}</td>
       <td style="font-weight:700;">${formatPeso(p.remainingBalance)}</td>
       <td>
         <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="selectPaymentAudit('${p.ref}')">
@@ -378,25 +667,39 @@ function selectPaymentAudit(ref) {
   document.getElementById('audit-ref').innerText = p.ref;
   document.getElementById('audit-acc').innerText = p.bankAccount;
   document.getElementById('audit-received').innerText = formatPeso(p.received);
-  document.getElementById('audit-charges').innerText = formatPeso(p.charges);
-  document.getElementById('audit-penalties').innerText = formatPeso(p.penalties);
+  document.getElementById('audit-charges').innerText = formatPeso(p.charges || 0);
+  document.getElementById('audit-penalties').innerText = formatPeso(p.penalties || 0);
   document.getElementById('audit-balance').innerText = formatPeso(p.remainingBalance);
   lucide.createIcons();
 }
 
-function filterPaymentRecords(q) {
-  const filtered = adminState.payments.filter(p => 
-    p.ref.toLowerCase().includes(q.toLowerCase()) || 
-    p.name.toLowerCase().includes(q.toLowerCase())
-  );
-  renderPayments(filtered);
-  lucide.createIcons();
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove('active');
 }
 
-function closeModal(id) {
-  document.getElementById(id).classList.remove('active');
-}
+// Reactivity & Cross-tab synchronization
+window.addEventListener('storage', function () {
+  if (document.getElementById('admin-app-screen').style.display !== 'none') {
+    renderAdminPortal();
+  }
+});
+
+window.addEventListener('coop-data-updated', function () {
+  if (document.getElementById('admin-app-screen').style.display !== 'none') {
+    renderAdminPortal();
+  }
+});
 
 window.onload = () => {
+  // Check if admin was previously logged in
+  if (CoopStore.getAdminLoggedIn()) {
+    document.getElementById('admin-auth-screen').style.display = 'none';
+    document.getElementById('admin-app-screen').style.display = 'flex';
+    renderAdminPortal();
+  } else {
+    document.getElementById('admin-auth-screen').style.display = 'flex';
+    document.getElementById('admin-app-screen').style.display = 'none';
+  }
   lucide.createIcons();
 };
